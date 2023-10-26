@@ -39,14 +39,11 @@ fastify
     - **api-routes.js**: It serves as a central place for routing, giving a bird's-eye view of all available routes. An example is shown below:
 
     ```javascript
-    const express = require('express');
-    const populationRoutes = require('./routes/population/population-route');
+    async function routes(fastify, options) {
+      fastify.register(require('./routes/population/population-route'), { prefix: '/api/population' });
+        }
 
-    const router = express.Router();
-
-    router.use('/population', populationRoutes);
-
-    module.exports = router;
+    module.exports = routes;
     ```
 
     - **routes**: This is designed to be modular, allowing for easy addition of new route categories as the project grows. Currently, it houses the `population` directory, which deals with routes related to city populations.
