@@ -1,18 +1,20 @@
-const { Pool } = require('pg');
-require('dotenv').config();
+const path = require('path');
+const sqlite3 = require('sqlite3').verbose();
 
-const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_DB,
-  password: process.env.DB_PW,
-  port: 5432,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: true } : false,
-  max: 40,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+// Absolute path to your SQLite database
+const DB_PATH = path.join(__dirname, '..', 'trazi_exercise.db');
+
+// This will create a new database or open an existing one
+const db = new sqlite3.Database(DB_PATH, err => {
+  if (err) {
+    console.error('Error connecting to SQLite database:', err);
+    return;
+  }
+  console.log('Connected to the SQLite database.');
 });
 
 module.exports = {
-  query: (text, params) => pool.query(text, params),
+  query: (text, params, callback) => db.run(text, params, callback),
+  get: (text, params, callback) => db.get(text, params, callback),
+  all: (text, params, callback) => db.all(text, params, callback),
 };

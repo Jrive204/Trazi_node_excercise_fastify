@@ -1,25 +1,27 @@
 const db = require('../../../data/dbConfig');
 
-async function populationRoutes(fastify, options) {
+function populationRoutes(fastify, options, done) {
   // GET
-  fastify.get('/state/:state/city/:city', { caseSensitive: false }, async (request, reply) => {
+  fastify.get('/state/:state/city/:city', { caseSensitive: false }, (request, reply) => {
     const state = request.params.state.toLowerCase();
     const city = request.params.city.toLowerCase();
-    try {
-      const result = await db.query(
-        'SELECT population FROM city_populations WHERE state = $1 AND city = $2',
-        [state, city],
-      );
 
-      if (result.rowCount === 0) {
-        return reply.status(404).send({ error: 'City not found in the specified state' });
-      }
+    db.get(
+      'SELECT population FROM city_populations WHERE state = ? AND city = ?',
+      [state, city],
+      (error, row) => {
+        if (error) {
+          fastify.log.error(error);
+          return reply.status(500).send({ error: 'Failed to retrieve data' });
+        }
 
-      return { population: result.rows[0].population };
-    } catch (error) {
-      fastify.log.error(error);
-      return reply.status(500).send({ error: 'Failed to retrieve data' });
-    }
+        if (!row) {
+          return reply.status(404).send({ error: 'City not found in the specified state' });
+        }
+
+        reply.send({ population: row.population });
+      },
+    );
   });
 
   // PUT
@@ -27,46 +29,53 @@ async function populationRoutes(fastify, options) {
     const state = request.params.state.toLowerCase();
     const city = request.params.city.toLowerCase();
     const population = parseInt(request.body, 10);
-
+    console.log(city, state, '<== city,state');
     if (isNaN(population) || typeof population !== 'number') {
-      return reply
-        .status(400)
-        .send({ error: 'Invalid population value just provide a number to update population' });
+      return reply.status(400).send({
+        error: 'Invalid population value just provide a number to update population',
+      });
     }
 
     try {
-      // Begin the transaction
-      await db.query('BEGIN');
+      const result = await new Promise((resolve, reject) => {
+        db.query(
+          'UPDATE city_populations SET population = ? WHERE state = ? AND city = ?',
+          [population, state, city],
+          function (error) {
+            if (error) {
+              return reject(error);
+            }
+            resolve(this.changes);
+          },
+        );
+      });
 
-      // First, attempt to update the city
-      const updateResult = await db.query(
-        'UPDATE city_populations SET population = $3 WHERE state = $1 AND city = $2',
-        [state, city, population],
-      );
-
-      if (updateResult.rowCount > 0) {
-        // Commit the transaction
-        await db.query('COMMIT');
+      // If rows were updated
+      if (result > 0) {
         return reply.status(200).send({ message: 'Population updated successfully' });
+      } else {
+        // If no rows were updated, insert a new city
+        await new Promise((resolve, reject) => {
+          db.query(
+            'INSERT INTO city_populations (state, city, population) VALUES (?, ?, ?)',
+            [state, city, population],
+            error => {
+              if (error) {
+                return reject(error);
+              }
+              resolve(true);
+            },
+          );
+        });
+        return reply.status(201).send({ message: 'City and population added successfully' });
       }
-
-      // If no rows were updated, then insert a new city
-      await db.query('INSERT INTO city_populations (state, city, population) VALUES ($1, $2, $3)', [
-        state,
-        city,
-        population,
-      ]);
-
-      // Commit the transaction
-      await db.query('COMMIT');
-      return reply.status(201).send({ message: 'City and population added successfully' });
     } catch (error) {
-      // If there's an error, roll back the transaction
-      await db.query('ROLLBACK');
       fastify.log.error(error);
       return reply.status(500).send({ error: 'Failed to update or insert data' });
     }
   });
+
+  done();
 }
 
 module.exports = populationRoutes;
