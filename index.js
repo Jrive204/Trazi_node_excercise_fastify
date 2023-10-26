@@ -1,6 +1,7 @@
 const server = require('./api/server');
 
 const sqlite3 = require('sqlite3').verbose();
+
 const dbPath = './trazi_exercise.db';
 global.db = new sqlite3.Database(dbPath, err => {
   if (err) {

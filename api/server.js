@@ -1,4 +1,4 @@
-const fastify = require('fastify')({ logger: true });
+const fastify = require('fastify')({ logger: false });
 
 fastify.register(require('./api-routes')); // Your routes
 

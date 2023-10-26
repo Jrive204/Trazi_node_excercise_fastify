@@ -5,10 +5,6 @@
 - execute the command:
   ```bash
   npm install
-- After setting up your PostgreSQL database, you can use migrations to structure it for the project.
-- Use the following command to run the migration script, which will create the required table:
-  ```bash
-  npm run migrate:up
 ## Project Folder Structure
 
 ```bash
@@ -54,19 +50,161 @@ fastify
 
 
 The project layout is crafted for scalability, ensuring that as the project grows, managing routes and other components remains straightforward.
+## Database Choice: SQLite3
 
-## API Performance Benchmarking
+1. **SQLite3**: For this exercise, SQLite3 was the chosen database due to its simplicity and ease of setup. It's an in-process library that implements a serverless, zero-configuration, transactional SQL database engine.
+
+### Pros and Cons: SQLite3 vs PostgreSQL
+
+**SQLite3**:
+- **Pros**:
+    - **Lightweight**: No server setup or configurations needed.
+    - **Portable**: The entire database is stored in a single file, which can be easily shared or archived.
+    - **Serverless**: Runs in the application's process, eliminating potential network overhead.
+    - **Simple Setup**: Ideal for prototypes, small apps, or as an embedded database.
+
+- **Cons**:
+    - **Scalability**: Not ideal for large-scale applications or high concurrency.
+    - **Features**: Lacks some of the advanced features provided by full-fledged databases like PostgreSQL.
+
+**PostgreSQL**:
+- **Pros**:
+    - **Robust & Full-featured**: Supports advanced data types, indexing, full-text search, and more.
+    - **Scalability**: Designed for scalability and high concurrency.
+    - **Extensibility**: Supports custom functions, stored procedures, and has a large number of extensions available.
+
+- **Cons**:
+    - **Complex Setup**: Requires more setup and configuration compared to SQLite3.
+    - **Overhead**: Might be overkill for simple applications or prototypes.
+
+### Throughput & Enterprise-level Applications:
+
+For high throughput and enterprise-level applications where scalability, concurrency, and a wide range of features are crucial, **PostgreSQL** would be the more appropriate choice. Its robustness and extensibility make it a preferred choice for large-scale, mission-critical applications.
+
+## SQLite3 vs PostgreSQL Performance Benchmarking Fastify
+
+To evaluate the performance differences between SQLite3 and PostgreSQL as backend databases for the API, ApacheBench was utilized for benchmarking. The primary focus was to observe how each database system impacted the API's ability to retrieve population data for specific cities. The findings are outlined below:
+
+### Test Configuration:
+- **Tool**: ApacheBench, Version 2.3
+- **Server**: Localhost (127.0.0.1) on port 5555
+- **Node**: 18.16.0
+- **Database Versions**: SQLite3: 3.43.2, PostgreSQL: 12.4
+
+### PostgreSQL Benchmarking Results:
+
+### Concurrency Level: 500, Number of Requests: 10,000
+(Test Command: `ab -c 500 -n 10000 http://127.0.0.1:5555/api/population/state/florida/city/{cityName}`)
+
+### 1. Miami:
+- **Time taken for tests**: 3.549 seconds
+- **Requests per second**: 2817.69
+- **Average Time per request**: 177.450 ms
+- **Longest request**: 185 ms
+
+### 2. Tampa:
+- **Time taken for tests**: 3.540 seconds
+- **Requests per second**: 2824.86
+- **Average Time per request**: 177.000 ms
+- **Longest request**: 182 ms
+
+### 3. Orlando:
+- **Time taken for tests**: 3.443 seconds
+- **Requests per second**: 2904.44
+- **Average Time per request**: 172.150 ms
+- **Longest request**: 177 ms
+
+### Concurrency Level: 100, Number of Requests: 10,000
+(Test Command: `ab -c 100 -n 10000 http://127.0.0.1:5555/api/population/state/florida/city/{cityName}`)
+
+### 1. Miami:
+- **Time taken for tests**: 3.295 seconds
+- **Requests per second**: 3034.90
+- **Average Time per request**: 32.950 ms
+- **Longest request**: 36 ms
+
+### 2. Tampa:
+- **Time taken for tests**: 3.361 seconds
+- **Requests per second**: 2975.30
+- **Average Time per request**: 33.610 ms
+- **Longest request**: 39 ms
+
+### 3. Orlando:
+- **Time taken for tests**: 3.265 seconds
+- **Requests per second**: 3062.79
+- **Average Time per request**: 32.650 ms
+- **Longest request**: 39 ms
+
+### SQLite3 Benchmarking Results:
+
+#### Concurrency Level: 500, Number of Requests: 10,000
+(Test Command: `ab -c 500 -n 10000 http://127.0.0.1:5555/api/population/state/florida/city/{cityName}`)
+
+#### 1. Miami:
+- **Time taken for tests**: 4.184 seconds
+- **Requests per second**: 2389.97
+- **Average Time per request**: 209.208 ms
+- **Longest request**: 237 ms
+#### 3. Tampa:
+- **Time taken for tests**: 4.427 seconds
+- **Requests per second**: 2259.02
+- **Average Time per request**: 221.335 ms
+- **Longest request**: 317 ms
+#### 2. Orlando:
+- **Time taken for tests**: 4.166 seconds
+- **Requests per second**: 2400.67
+- **Average Time per request**: 208.275 ms
+- **Longest request**: 221 ms
+
+#### Concurrency Level: 100, Number of Requests: 10,000
+(Test Command: `ab -c 100 -n 10000 http://127.0.0.1:5555/api/population/state/florida/city/{cityName}`)
+
+#### 1. Miami:
+- **Time taken for tests**: 3.579 seconds
+- **Requests per second**: 2794.17
+- **Average Time per request**: 35.789 ms
+- **Longest request**: 43 ms
+
+#### 2. Tampa:
+- **Time taken for tests**: 3.662 seconds
+- **Requests per second**: 2730.49
+- **Average Time per request**: 36.623 ms
+- **Longest request**: 50 ms
+
+#### 3. Orlando:
+- **Time taken for tests**: 3.738 seconds
+- **Requests per second**: 2674.91
+- **Average Time per request**: 37.384 ms
+- **Longest request**: 56 ms
+
+### Conclusion
+
+Upon examining the benchmarking results for both PostgreSQL and SQLite3, several observations can be drawn:
+
+1. **Requests Per Second**: PostgreSQL consistently outperforms SQLite3 in terms of requests per second (RPS). For example, with a concurrency level of 500 for the city Miami, PostgreSQL achieved an RPS of 2817.69, whereas SQLite3 reached 2389.97.
+
+2. **Average Time Per Request**: The average time taken for each request is higher for SQLite3 compared to PostgreSQL. At a concurrency level of 500 for Miami, PostgreSQL had an average request time of 177.450 ms, while SQLite3 took 209.208 ms.
+
+3. **Scalability with Concurrency**: As the concurrency level dropped from 500 to 100, the performance gap between PostgreSQL and SQLite3 narrowed. While PostgreSQL still had the edge in RPS, the difference in the average time per request became less pronounced.
+
+4. **Longest Request Time**: In terms of the maximum time taken for a single request, SQLite3 exhibited higher latencies compared to PostgreSQL, especially noticeable at higher concurrency levels.
+
+In summary, while both databases show commendable performance, PostgreSQL demonstrates superior throughput and responsiveness in this benchmarking scenario. For applications requiring high concurrent access and swift response times, PostgreSQL appears to be the more suitable choice. However, it's essential to consider the specific use-case and infrastructure when making a final decision.
+
+
+
+##  Performance Benchmarking for PostgreSQL Fastify vs Express vs Vanilla Node.js
 
 In my efforts to assess the performance of my API, I utilized ApacheBench for benchmarking. The focus was on using my API endpoint to fetch population data for specific cities in Florida. Here are my findings:
 
-## Test Configuration:
+### Test Configuration:
 - **Tool**: ApacheBench, Version 2.3
 - **Server**: Localhost (127.0.0.1) on port 5555
 - **Node**: 18.16.0
 - **fastify**: 4.24.3
 - **express**: 4.18.2
 
-## Fastify API Benchmarking Results:
+### Fastify API Benchmarking Results:
 
 ### Concurrency Level: 500, Number of Requests: 10,000
 (Test Command: `ab -c 500 -n 10000 http://127.0.0.1:5555/api/population/state/florida/city/{cityName}`)
